@@ -9,11 +9,13 @@ import {
   Revenue,
 } from './definitions';
 import { formatCurrency } from './utils';
+import { unstable_noStore as noStore } from 'next/cache'; // 動的レンダリングにする
 
 export async function fetchRevenue() {
   // Add noStore() here prevent the response from being cached.
   // This is equivalent to in fetch(..., {cache: 'no-store'}).
-
+  noStore();
+  // 動的レンダリングを使用すると最も遅いデータフェッチに合わせて動作する
   try {
     // Artificially delay a response for demo purposes.
     // Don't do this in production :)
@@ -33,6 +35,7 @@ export async function fetchRevenue() {
 }
 
 export async function fetchLatestInvoices() {
+  noStore();
   try {
     const data = await sql<LatestInvoiceRaw>`
       SELECT invoices.amount, customers.name, customers.image_url, customers.email, invoices.id
@@ -53,6 +56,7 @@ export async function fetchLatestInvoices() {
 }
 
 export async function fetchCardData() {
+  noStore();
   try {
     // You can probably combine these into a single SQL query
     // However, we are intentionally splitting them to demonstrate
@@ -64,6 +68,7 @@ export async function fetchCardData() {
          SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) AS "pending"
          FROM invoices`;
 
+    // parallel data fetching ウォーターフォールを回避する一般的な方法として全てのデータ要求を同時に並行して開始する
     const data = await Promise.all([
       invoiceCountPromise,
       customerCountPromise,
@@ -92,6 +97,7 @@ export async function fetchFilteredInvoices(
   query: string,
   currentPage: number,
 ) {
+  noStore();
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
   try {
@@ -124,6 +130,7 @@ export async function fetchFilteredInvoices(
 }
 
 export async function fetchInvoicesPages(query: string) {
+  noStore();
   try {
     const count = await sql`SELECT COUNT(*)
     FROM invoices
@@ -145,6 +152,7 @@ export async function fetchInvoicesPages(query: string) {
 }
 
 export async function fetchInvoiceById(id: string) {
+  noStore();
   try {
     const data = await sql<InvoiceForm>`
       SELECT
